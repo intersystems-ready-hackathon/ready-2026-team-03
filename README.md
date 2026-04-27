@@ -1,25 +1,47 @@
-# TEAM 03 - [ Name of Project ] 
+# TEAM 03 - Pre-Op Patient Navigator
 
 ## Project Summary 
 
-[ Add a 1-2 sentence summary of your project here - i,e. what is the high level goal of your project ] 
+An AI-powered pre-operative assistant designed to streamline surgical preparation for patients undergoing procedures like EVLA. The agent interacts with patients to verify medical history, provides tailored preparation instructions, and cross-checks medication safety against InterSystems IRIS patient records.
 
 ## Technical Details
 
-[ Add details on the technical implementation of your project here ] 
+The project is built on the InterSystems AI Hub using an Agentic AI architecture:
 
-## Setup Instructions [Optional]
+LLM Orchestration: An agent using Sample.Agent logic to handle patient queries.
 
-[ If you have time, please add details on how someone else can start using your project here ]
+Database Integration (SQL Tools): A custom Toolset connected to InterSystems IRIS that queries live patient data (allergies, medications) using ObjectScript and Python.
+
+Clinical Knowledge Base (RAG): The agent utilizes a retrieval tool to access surgical protocols and pre-op guidelines stored within the IRIS platform.
+
+Safety Logic: The agent employs multi-step reasoning to validate if a patient’s current medication (e.g., blood thinners) conflicts with the scheduled surgery.
+
+## Setup Instructions
+
+Ensure an OPENAI_API_KEY is present in the .env file.
+
+Run docker-compose up -d --build to launch the IRIS AI Hub container.
+
+The agent can be initialized via the IRIS Terminal:
+
+zn "IRISAPP"
+
+set agent = ##class(Sample.Agent).%New()
+
+set sc = agent.%Init()
+
+set session = agent.CreateSession()
+
+write agent.Chat(session, "Can I take my blood thinners before tomorrow's surgery?")
+
+
 
 ## Publicly accessible statement
 
-**Delete as appropriate**: 
-- We are happy for our project to be publicly visable after the event (you will remain repo admins) 
-- We would like our project to be made private at the end of the event
+We are happy for our project to be publicly visible after the event.
 
 
-# Template Instructions (feel free to delete)
+# Template Instructions (//delete)
 
 This repo provides a template to kickstart development with AI Hub. 
 
