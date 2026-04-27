@@ -1,44 +1,77 @@
-# Patient Chat (Streamlit)
+# Patient Admission Chatbot (Streamlit + IRIS)
 
-A minimal Streamlit + OpenAI chatbot that talks to a patient before their
-visit and collects symptoms / context. Designed as a starting point: the
-agent code is isolated in `agent.py`, so you can swap the OpenAI call for a
-LangGraph multi-agent flow (like the original example) without touching the
-UI layer.
+A Streamlit chatbot that performs the **patient admission** workflow against
+the `Data.Patients` IRIS table via `intersystems-irispython`.
+
+## Admission flow
+
+1. CareBot greets the patient and asks **who they are** and whether this is
+   their **first** visit.
+2. It identifies them through:
+   - **SSN** → `find_patient_by_ssn` tool, or
+   - **first + last name** → `find_patient_by_name` tool.
+3. If a record is found, the structured data is shown back to the patient
+   for **confirmation**. Updates (e.g. new address) go through the
+   `update_patient` tool.
+4. If no record is found, the chat collects SSN / name / date of birth /
+   gender / phone / address, the patient confirms, and `create_patient`
+   inserts the row in IRIS.
 
 ## Files
 
-- `agent.py` — `PatientAgent` wrapping the OpenAI streaming API + system prompt.
-- `streaming.py` — `stream_wrapper` that yields tokens for `st.write_stream`.
-- `app.py` — Streamlit UI: chat history, reset button, sidebar.
-- `logging_config.py` — single-call `setup_logging()` (stderr + rotating file).
+- `app.py` — Streamlit UI (chat history, patient card, tool trace).
+- `agent.py` — OpenAI tool-calling agent that yields `tool_call`,
+  `tool_result` and `text` events.
+- `tools.py` — one Python function per tool, decorated with
+  `@langchain_core.tools.tool`. The OpenAI schemas
+  (`TOOL_SCHEMAS` / `TOOL_REGISTRY`) are derived automatically via
+  `langchain_core.utils.function_calling.convert_to_openai_tool`.
+- `db.py` — `intersystems-irispython` connection helper.
+- `streaming.py` — bridges agent events to `st.write_stream`.
+- `logging_config.py` — `setup_logging()` (stderr + rotating file).
+- `assets/captions.json` — friendly "thinking" captions.
 
-## Setup
+## Database
 
-From the repo root:
+`src/Data/Patients.cls` defines the persistent class. Re-build the IRIS
+container after pulling these changes so the new schema is compiled:
+
+```bash
+docker compose down -v
+docker compose up --build
+```
+
+The class has a unique index on `SSN` (`SSNIndex`) plus a
+`(LastName, FirstName)` index used by name lookup.
+
+## Setup (host machine)
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Make sure `.env` contains your key (the file already exists in this repo,
-see `.env.example`):
+Required Python packages (already in `requirements.txt`): `streamlit`,
+`openai`, `python-dotenv`, **`intersystems-irispython`**, **`langchain-core`**.
 
-```
+## Environment
+
+Add the following to `.env`:
+
+```dotenv
 OPENAI_API_KEY=sk-...
-# optional: override the model (default: gpt-5-nano, matching src/Sample/Agent.cls)
+# optional: override the model (default: gpt-5-nano)
 OPENAI_MODEL=gpt-5-nano
-# optional: DEBUG | INFO | WARNING | ERROR  (default: INFO)
+
+# IRIS connection (defaults match docker-compose.yml)
+IRIS_HOST=localhost
+IRIS_PORT=9091          # mapped to 1972 in docker-compose
+IRIS_NAMESPACE=IRISAPP
+IRIS_USER=_SYSTEM
+IRIS_PASSWORD=SYS
+
+# optional: DEBUG | INFO | WARNING | ERROR
 LOG_LEVEL=INFO
 ```
-
-Logs are written to stderr **and** to
-`src/Python/patient_chat/logs/patient_chat.log` (rotated at 1 MB,
-3 backups). The folder is git-ignored.
-
-> If you get `429 ... Limit 0, Requested 1`, your OpenAI project doesn't
-> have access to the model. Set `OPENAI_MODEL` to one your key can call
-> (check <https://platform.openai.com/account/limits>).
 
 ## Run
 
@@ -46,11 +79,29 @@ Logs are written to stderr **and** to
 streamlit run src/Python/patient_chat/app.py
 ```
 
-Then open the URL Streamlit prints (usually <http://localhost:8501>).
+Then open <http://localhost:8501>.
+
+## Sample dialog
+
+```
+CareBot> Hi 👋 I'll help check you in. What's your name, and is this your first visit?
+You    > I'm Mario Rossi, my SSN is RSSMRA80A01H501U
+CareBot> [calls find_patient_by_ssn] ... I found you. Please confirm:
+         • SSN: RSSMRA80A01H501U
+         • First name: Mario
+         • Last name: Rossi
+         • Date of birth: 1980-01-01
+         • Phone: +39 06 1234567
+         • Address: Via Roma 1, Roma
+         Is everything correct?
+You    > Yes, but my new address is Via Milano 22, Milano
+CareBot> [calls update_patient] Thanks, I've updated your address. ...
+```
 
 ## Extending
 
-- Change the persona / triage logic → edit `SYSTEM_PROMPT` in `agent.py`.
-- Use a different model → edit `AgentConfig.model`.
-- Plug in tools / RAG / a LangGraph workflow → replace `PatientAgent.stream`
-  with your own generator; the UI just needs an iterator of strings.
+- **Add a tool** → write a function in `tools.py`, register it in
+  `TOOL_REGISTRY`, append a JSON schema to `TOOL_SCHEMAS`. The agent
+  picks it up automatically.
+- **Change the persona** → edit `SYSTEM_PROMPT` in `agent.py`.
+- **Use a different model** → set `OPENAI_MODEL` in `.env`.
