@@ -4,7 +4,6 @@
     // ** Comment out these two line for Production use **
     do ##class(Security.Users).UnExpireUserPasswords("*")
     
-
     set tURL = "https://pm.community.intersystems.com/packages/zpm/latest/installer"
     set r = ##class(%Net.HttpRequest).%New()
     set r.Server = "pm.community.intersystems.com"

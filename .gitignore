@@ -4,3 +4,5 @@ iris-main.log
 .git
 **.tar.gz
 **.tar
+src/Python/patient_chat/logs/
+**/__pycache__/
