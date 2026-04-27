@@ -47,6 +47,10 @@
     do addStatement.%Execute("Amy", 32)
     do addStatement.%Execute("Zahra", 28)
 
-    
     zpm "load /home/irisowner/dev/ -v":1:1
+    
+    do ##class(Data.Patients).Populate()
+    do ##class(Data.ScheduledProcedure).Populate()
+    do ##class(Data.SpecialtyGuide).Populate()
+    
     halt

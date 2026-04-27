@@ -47,6 +47,55 @@ def render_patient_card(record: dict) -> None:
             display = value if value not in (None, "") else "—"
             col.markdown(f"- **{humanize(key)}:** {display}")
 
+
+_STATUS_BADGE = {
+    "Scheduled": "🟡",
+    "Confirmed": "🟢",
+    "Completed": "✅",
+    "Cancelled": "🔴",
+    "NoShow": "⚫",
+}
+
+
+def render_procedures(procedures: list[dict]) -> None:
+    """Render the patient's scheduled procedures (whatever columns came back)."""
+    if not procedures:
+        return
+    with st.container(border=True):
+        st.markdown(f"**Scheduled procedures ({len(procedures)})**")
+        for p in procedures:
+            badge = _STATUS_BADGE.get(p.get("Status") or "", "")
+            header = (
+                f"{badge} **{p.get('ProcedureName', '?')}** · "
+                f"{p.get('ScheduledDate') or '—'} · "
+                f"`{p.get('SpecialtyID', '?')}`"
+            )
+            st.markdown(header)
+            details = []
+            for key, value in p.items():
+                if key in {"ProcedureName", "ScheduledDate", "SpecialtyID", "Status"}:
+                    continue
+                if value in (None, ""):
+                    continue
+                details.append(f"  - **{humanize(key)}:** {value}")
+            if details:
+                st.markdown("\n".join(details))
+
+
+def render_specialty_guide(guide: dict) -> None:
+    if not guide:
+        return
+    title = guide.get("SpecialtyName") or guide.get("SpecialtyID") or "Specialty guide"
+    with st.expander(f"📘 Specialty guide · {title}", expanded=False):
+        for key, value in guide.items():
+            if key == "Content" or value in (None, ""):
+                continue
+            st.markdown(f"- **{humanize(key)}:** {value}")
+        content = guide.get("Content")
+        if content:
+            st.markdown("---")
+            st.code(content, language="markdown")
+
 def render_tool_trace(tool_calls: list[dict]) -> None:
     if not tool_calls:
         return
@@ -68,8 +117,9 @@ st.set_page_config(page_title="Patient Admission", page_icon="🩺")
 with st.container():
     st.title("🩺 Patient Admission")
     st.caption(
-        "Front-desk virtual assistant. It identifies you in our system "
-        "(by name or SSN) or registers you if you're new."
+        "Pre-op check-in assistant. We identify you, complete your record, "
+        "confirm your scheduled procedure and run a specialty-driven pre-op "
+        "screen. Bookings must be made through reception in advance."
     )
 
 if "agent" not in st.session_state:
@@ -85,10 +135,11 @@ if "messages" not in st.session_state:
         {
             "role": "assistant",
             "content": (
-                "Hi, I'm CareBot 👋 — I'll help check you in for your visit.\n\n"
-                "Could you tell me **your name**, and whether this is your "
-                "**first time** here? If you have your **SSN** handy, that "
-                "speeds things up."
+                "Hi, I'm CareBot 👋 — I'll check you in for your scheduled "
+                "procedure.\n\n"
+                "Could you tell me **who you are**? If you have your "
+                "**SSN** (9 digits) handy, that's the quickest way to find "
+                "your booking."
             ),
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
@@ -105,8 +156,11 @@ with st.sidebar:
     st.markdown(
         "- `find_patient_by_ssn`\n"
         "- `find_patient_by_name`\n"
-        "- `create_patient`\n"
-        "- `update_patient`"
+        "- `update_patient`\n"
+        "- `find_scheduled_procedures`\n"
+        "- `confirm_scheduled_procedure`\n"
+        "- `get_specialty_guide`\n"
+        "- `update_procedure_pre_op`"
     )
 
 
@@ -124,6 +178,12 @@ for message in st.session_state.messages:
             with st.expander(f"👥 {len(candidates)} candidate(s) matched"):
                 for c in candidates:
                     render_patient_card(c)
+
+        if message.get("scheduled_procedures"):
+            render_procedures(message["scheduled_procedures"])
+
+        if message.get("specialty_guide"):
+            render_specialty_guide(message["specialty_guide"])
 
         if message.get("tool_calls"):
             render_tool_trace(message["tool_calls"])
@@ -166,6 +226,10 @@ if prompt := st.chat_input("Type your reply..."):
             ):
                 for c in info_container["patient_candidates"]:
                     render_patient_card(c)
+        if info_container.get("scheduled_procedures"):
+            render_procedures(info_container["scheduled_procedures"])
+        if info_container.get("specialty_guide"):
+            render_specialty_guide(info_container["specialty_guide"])
         if info_container.get("tool_calls"):
             render_tool_trace(info_container["tool_calls"])
 
@@ -178,6 +242,8 @@ if prompt := st.chat_input("Type your reply..."):
                 "tool_calls": info_container.get("tool_calls"),
                 "patient_record": info_container.get("patient_record"),
                 "patient_candidates": info_container.get("patient_candidates"),
+                "scheduled_procedures": info_container.get("scheduled_procedures"),
+                "specialty_guide": info_container.get("specialty_guide"),
             }
         )
         st.rerun()

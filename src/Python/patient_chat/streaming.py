@@ -42,14 +42,26 @@ def _is_patient_record(value) -> bool:
         return False
     return "SSN" in value and ("FirstName" in value or "LastName" in value)
 
-def _record_patient_from_result(info_container: dict, result) -> None:
-    """If the tool returned a patient record, capture it for the UI card."""
+
+def _is_procedure_row(value) -> bool:
+    if not isinstance(value, dict):
+        return False
+    return "PatientSSN" in value and "ProcedureName" in value
+
+
+def _record_from_tool(info_container: dict, tool_name: str, result) -> None:
+    """Pull structured data out of tool results so the UI can render cards."""
     if _is_patient_record(result):
         info_container["patient_record"] = result
     elif isinstance(result, list) and len(result) == 1 and _is_patient_record(result[0]):
         info_container["patient_record"] = result[0]
     elif isinstance(result, list) and result and all(_is_patient_record(r) for r in result):
         info_container["patient_candidates"] = result
+
+    if tool_name == "find_scheduled_procedures" and isinstance(result, list):
+        info_container["scheduled_procedures"] = result
+    elif tool_name == "get_specialty_guide" and isinstance(result, dict) and result.get("SpecialtyID"):
+        info_container["specialty_guide"] = result
 
 def stream_wrapper(
     query: str,
@@ -114,7 +126,7 @@ def stream_wrapper(
                     if tc.get("id") == event.get("id"):
                         tc["result"] = event["result"]
                         break
-                _record_patient_from_result(info_container, event["result"])
+                _record_from_tool(info_container, event["name"], event["result"])
 
             elif etype == "text":
                 status_placeholder.empty()

@@ -1,161 +1,116 @@
-# TEAM 03 - Pre-Op Patient Navigator
+# TEAM 03 — Pre-Op Patient Navigator
 
-## Project Summary 
+An AI-powered pre-operative assistant that checks patients in for their
+booked surgery. It identifies the patient against an InterSystems IRIS
+database, completes any missing demographic data, confirms the scheduled
+procedure, runs a specialty-driven pre-op screen (medications,
+allergies, risk factors) and surfaces likely contraindications based on
+the matching specialty guideline.
 
-An AI-powered pre-operative assistant designed to streamline surgical preparation for patients undergoing procedures like EVLA. The agent interacts with patients to verify medical history, provides tailored preparation instructions, and cross-checks medication safety against InterSystems IRIS patient records.
+## What's in the repo
 
-## Technical Details
+- `src/Data/` — IRIS persistent classes seeded automatically by ZPM:
+  - `Data.Patients` — patient master (SSN-keyed).
+  - `Data.SpecialtyGuide` — pre-op screening guides for 5 specialties
+    (CARD / ENDO / GENS / ORTH / UROL), text inlined directly in the
+    class.
+  - `Data.ScheduledProcedure` — bookings, indexed by `PatientSSN`.
+- `src/Python/patient_chat/` — Streamlit chatbot:
+  - `app.py` — UI (chat history + structured patient / procedure /
+    guide cards).
+  - `agent.py` — OpenAI tool-calling loop with the multi-phase
+    admission system prompt.
+  - `tools.py` — patient + procedure + guide tools (LangChain
+    `@tool`, OpenAI schemas auto-generated, columns discovered via
+    `INFORMATION_SCHEMA`).
+  - `db.py`, `streaming.py`, `logging_config.py`, `assets/`.
+  - `input_example.md` — copy/paste sample inputs to drive every
+    phase of the workflow.
+- `module.xml` — ZPM module manifest. Calls `Populate` on each
+  persistent class at install time, so the demo data is created
+  automatically.
+- `docker-compose.yml`, `Dockerfile`, `iris.script` — IRIS AI Hub
+  container build.
 
-The project is built on the InterSystems AI Hub using an Agentic AI architecture:
+## Prerequisites
 
-LLM Orchestration: An agent using Sample.Agent logic to handle patient queries.
+- Docker / Docker Desktop with `docker compose`.
+- Python 3.10+ on the host machine (for the Streamlit app).
+- An OpenAI API key for a chat model that supports tool calling
+  (default: `gpt-5-nano`).
 
-Database Integration (SQL Tools): A custom Toolset connected to InterSystems IRIS that queries live patient data (allergies, medications) using ObjectScript and Python.
+## 1. Configure environment
 
-Clinical Knowledge Base (RAG): The agent utilizes a retrieval tool to access surgical protocols and pre-op guidelines stored within the IRIS platform.
+Create a `.env` file in the repo root (see `.env.example`):
 
-Safety Logic: The agent employs multi-step reasoning to validate if a patient’s current medication (e.g., blood thinners) conflicts with the scheduled surgery.
+```dotenv
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-5-nano
 
-## Setup Instructions
+IRIS_HOST=localhost
+IRIS_PORT=9091
+IRIS_NAMESPACE=IRISAPP
+IRIS_USER=_SYSTEM
+IRIS_PASSWORD=SYS
 
-Ensure an OPENAI_API_KEY is present in the .env file.
+LOG_LEVEL=INFO
+```
 
-Run docker-compose up -d --build to launch the IRIS AI Hub container.
+The IRIS host ports come from `docker-compose.yml` (SuperServer is
+`9091 → 1972`, Management Portal is `9092 → 52773`).
 
-The agent can be initialized via the IRIS Terminal:
+## 2. Start IRIS
 
-zn "IRISAPP"
+The first `up` builds the AI Hub image and runs `iris.script`, which
+loads the ZPM module and calls each class's `Populate` method to seed
+patients, specialty guides and scheduled procedures.
 
-set agent = ##class(Sample.Agent).%New()
+```bash
+docker compose up -d --build
+```
 
-set sc = agent.%Init()
+Tail the logs until you see the `Populate` output:
 
-set session = agent.CreateSession()
+```bash
+docker compose logs -f iris
+```
 
-write agent.Chat(session, "Can I take my blood thinners before tomorrow's surgery?")
+When the container is ready you can reach:
 
+- Management Portal — <http://localhost:9092/csp/sys/UtilHome.csp>
+  (login `_SYSTEM` / `SYS`).
+- IRIS Terminal — `docker compose exec -it iris iris session iris`.
 
+## 3. Install Python dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+## 4. Run the chatbot
+
+```bash
+streamlit run src/Python/patient_chat/app.py
+```
+
+Open <http://localhost:8501>.
+
+## 5. Try it
+
+- Use streamlit interface to simulate a patient admission
+
+## Reset / rebuild
+
+To wipe the IRIS volume and re-seed from scratch:
+
+```bash
+docker compose down -v
+docker compose up -d --build
+```
+
+To just reset the chat conversation, use the **🔄 Reset conversation**
+button in the Streamlit sidebar.
 
 ## Publicly accessible statement
 
 We are happy for our project to be publicly visible after the event.
-
-
-# Template Instructions (//delete)
-
-This repo provides a template to kickstart development with AI Hub. 
-
-## Contents
-
-- **./skills** - agent skills with information on using AI hub for AI agents. Move these to a suitable location for your preferred AI coding agent. 
-- **./src/Sample** - Basic sample classes for tools, toolsets, agents and MCP servers. These are installed with zpm when the container is build.  
-- **./src/Python** - An example stdio MCP server defined in Python and used in the IRIS Toolsets 
-- **Datasets.md** - Notes on some datasets or tools to import datasets available on Open Exchange for easy install 
-
-## Using the template
-
-### Download AI Hub Container
-
-
-1. Download an AI Hub container from the [Early Access Program Portal](https://evaluation.intersystems.com/Eval/early-access/AIHub). The docker-containers end with `docker.tar.gz`, ensure you choose the version suitable for your operating system (arm64 for macOS).
-
-OR 
-
-1. Copy AI Hub Container from your Flash Drive
-
-2. Load the image with: 
-
-    ```bash
-    docker load -i /path/to/irishealth-community-2026.2.0AI.158.0-docker.tar.gz
-    ```
-
-    Once it's complete you should see `Loaded image: docker.iscinternal.com/docker-intersystems/intersystems/iris-community:2026.2.0AI.158.0` (if not you can use `docker images` to find the image name). 
-
-3. Change the Image name in the [Dockerfile](./Dockerfile) to match your version and operating system (image name printed above).
-
-
-
-### Build Template Repo
-
-4. Clone this repo: 
-
-```bash
-git clone https://github.com/intersystems-ready-hackathon/ready-2026-team-03.git
-cd ready-2026-team-03
-```
-
-5. (Optional) Add an OPENAI_API_KEY to a file called .env in this repo. You can see an example in .env.example.
-
-6. Build the container with: 
-
-```bash
-docker-compose up -d --build 
-```
-
-## Using IRIS AI Hub Container
-
-### Accessing IRIS 
-
-You can find the Management Portal at http://localhost:52773/csp/sys/UtilHome.csp.
-
-Login with: 
-    - SuperUser / SYS
-
-You can access the IRIS Terminal with:
-
-```objectscript
-docker-compose exec -it iris iris session iris
-```
-
-or the bash terminal with:
-
-```bash
-docker-compose exec -it iris iris session iris
-```
-
-### Testing Sample agent 
-
-There is a basic agent in src/Sample.Agent, a simple way to use it from objectscript is to run the following (note this does require an OPENAI_API_KEY to be added to .env before running th container). 
-
-```objectscript
-set $NAMESPACE= "IRISAPP"
-Set agent = ##class(Sample.Agent).%New()
-Set sc = agent.%Init()
-write:sc'=1 $SYSTEM.Status.GetErrorText(sc), !
-
-Set session = agent.CreateSession()
-
-// This requires using both tools defined in Sample.Tools and packaged in Sample.ToolSet
-Set request = "Add a person named Alice aged 30, and then get people younger than 35."
-Set response = agent.Chat(session, request)
-write response.content
-```
-
-### Test MCP Server
-
-The build process installs an MCP server web application at http://localhost:52773/mcp/sample. You can check this MCP server is running by going to http://localhost:52773/mcp/sample/v1/services. 
-
-For the MCP Server to be usable, there is an additional step of starting this via a Rust binary which connects to IRIS through the web gateway protocol. The Binary is installed in `/usr/irissys/bin` (should already be in PATH).  
-
-A sample configuration is shown in [config.toml](./config.toml), which serves a remote HTTP server on port 8080 (which is exposed by the docker-compose file). 
-
-To start the transport, open a bash terminal within the container: 
-
-```bash
-docker-compose exec -it iris bash 
-```
-
-Then start the `iris-mcp-server`
-
-```bash 
-iris-mcp-server -c config.toml run 
-```
-
-You can now connect the MCP server to your MCP Client of choice (e.g. coding agents like claude code) using the address: http://localhost:8080/mcp/sample. 
-
-An example python MCP client is shown in test_mcp_connection.py, which uses Langchain's MCP adapters module. To try this, run: 
-
-```bash
-pip install langchain-mcp-adapters
-python test_mcp.py
-```

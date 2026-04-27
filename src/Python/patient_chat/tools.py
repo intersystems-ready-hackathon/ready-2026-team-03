@@ -28,10 +28,13 @@ from db import connect
 
 logger = logging.getLogger(__name__)
 
-# Schema-qualified table name. Split lazily so SCHEMA / NAME are derived
+# Schema-qualified table names. Split lazily so SCHEMA / NAME are derived
 # from this single source of truth.
 TABLE = "Data.Patients"
 TABLE_SCHEMA, TABLE_NAME = TABLE.split(".", 1)
+
+PROCEDURE_TABLE = "Data.ScheduledProcedure"
+GUIDE_TABLE = "Data.SpecialtyGuide"
 
 # Columns that are managed by the database / class definition, not by users.
 _AUDIT_COLUMNS = frozenset({"ID", "CreatedAt", "UpdatedAt"})
@@ -362,6 +365,160 @@ def update_patient(
     }
 
 
+# ---------- scheduled procedures + specialty guides ----------
+
+def _proc_columns() -> list[str]:
+    """Selectable columns from ScheduledProcedure (excludes audit fields)."""
+    schema, name = PROCEDURE_TABLE.split(".", 1)
+    return [c for c in _get_table_columns(schema, name) if c not in _AUDIT_COLUMNS]
+
+
+def _guide_columns() -> list[str]:
+    schema, name = GUIDE_TABLE.split(".", 1)
+    return [c for c in _get_table_columns(schema, name) if c not in _AUDIT_COLUMNS]
+
+
+@tool
+def find_scheduled_procedures(
+    ssn: Annotated[str, Field(description=_SSN_DESCRIPTION + " Used to find the patient's bookings.")],
+) -> list[dict]:
+    """Return all scheduled procedures for a patient (by SSN), most recent first.
+
+    Each row includes the procedure ID, specialty key, procedure name, the
+    scheduled date, current status and any pre-op info already on file. An
+    empty list means the patient has no bookings — they should be told to
+    book through reception.
+    """
+    normalized = _normalize_ssn(ssn)
+    if normalized is None:
+        return _ssn_error(ssn)
+
+    cols = _proc_columns()
+    select = ", ".join(cols)
+    sql = (
+        f"SELECT {select} FROM {PROCEDURE_TABLE} "
+        f"WHERE PatientSSN = ? ORDER BY ScheduledDate"
+    )
+    with closing(connect()) as db, db.cursor() as cur:
+        cur.execute(sql, [normalized])
+        rows = cur.fetchall()
+        results = [_row_to_dict(cur, r) for r in rows]
+    logger.info("find_scheduled_procedures(%s) -> %d booking(s)", normalized, len(results))
+    return results
+
+
+@tool
+def get_specialty_guide(
+    specialty_id: Annotated[
+        str,
+        Field(description="Specialty key, e.g. 'ST-ENDO'. Comes from a scheduled procedure row."),
+    ],
+) -> dict | None:
+    """Fetch the pre-op screening guide for a specialty.
+
+    The agent should call this AFTER it knows the patient's procedure (and
+    therefore the SpecialtyID) to read the relevant risk factors, notable
+    medications, allergies and prompts. Returns null if the specialty is
+    unknown.
+    """
+    cols = ", ".join(_guide_columns())
+    sql = f"SELECT {cols} FROM {GUIDE_TABLE} WHERE SpecialtyID = ?"
+    with closing(connect()) as db, db.cursor() as cur:
+        cur.execute(sql, [specialty_id])
+        row = cur.fetchone()
+        result = _row_to_dict(cur, row) if row else None
+    logger.info("get_specialty_guide(%s) -> %s", specialty_id, "hit" if result else "miss")
+    return result
+
+
+@tool
+def update_procedure_pre_op(
+    procedure_id: Annotated[
+        int, Field(description="The numeric ID of the ScheduledProcedure row to annotate.")
+    ],
+    current_medications: Annotated[
+        str | None, Field(description="Free-text list of medications the patient is taking.")
+    ] = None,
+    allergies: Annotated[
+        str | None, Field(description="Free-text list of patient allergies / reactions.")
+    ] = None,
+    risk_factors: Annotated[
+        str | None,
+        Field(description="Free-text summary of relevant risk factors / comorbidities."),
+    ] = None,
+    notes: Annotated[
+        str | None,
+        Field(description="Optional clinician hand-off notes / contraindication flags."),
+    ] = None,
+) -> dict:
+    """Save the patient-reported pre-op info on a scheduled procedure.
+
+    Pass only the fields you have collected. Always confirm the values with
+    the patient before calling.
+    """
+    candidate = {
+        "CurrentMedications": current_medications,
+        "Allergies": allergies,
+        "RiskFactors": risk_factors,
+        "Notes": notes,
+    }
+    fields = {k: v for k, v in candidate.items() if v is not None}
+    if not fields:
+        return {"status": "error", "error": "No pre-op fields provided to update."}
+
+    set_clause = ", ".join(f"{k} = ?" for k in fields)
+    sql = (
+        f"UPDATE {PROCEDURE_TABLE} SET {set_clause}, "
+        f"UpdatedAt = CURRENT_TIMESTAMP WHERE ID = ?"
+    )
+    params = [*fields.values(), procedure_id]
+    try:
+        with closing(connect()) as db, db.cursor() as cur:
+            cur.execute(sql, params)
+            n = cur.rowcount or 0
+            db.commit()
+    except Exception as exc:
+        logger.exception("update_procedure_pre_op failed for ID=%s", procedure_id)
+        return {"status": "error", "error": str(exc)}
+    if n == 0:
+        return {"status": "not_found", "procedure_id": procedure_id}
+    logger.info(
+        "update_procedure_pre_op OK (ID=%s, fields=%s)", procedure_id, list(fields)
+    )
+    return {
+        "status": "updated",
+        "procedure_id": procedure_id,
+        "updated_fields": list(fields),
+    }
+
+
+@tool
+def confirm_scheduled_procedure(
+    procedure_id: Annotated[
+        int, Field(description="The numeric ID of the ScheduledProcedure row to confirm.")
+    ],
+) -> dict:
+    """Mark a scheduled procedure as Confirmed (after the patient has
+    explicitly acknowledged the date and procedure name).
+    """
+    sql = (
+        f"UPDATE {PROCEDURE_TABLE} SET Status = 'Confirmed', "
+        f"UpdatedAt = CURRENT_TIMESTAMP WHERE ID = ?"
+    )
+    try:
+        with closing(connect()) as db, db.cursor() as cur:
+            cur.execute(sql, [procedure_id])
+            n = cur.rowcount or 0
+            db.commit()
+    except Exception as exc:
+        logger.exception("confirm_scheduled_procedure failed for ID=%s", procedure_id)
+        return {"status": "error", "error": str(exc)}
+    if n == 0:
+        return {"status": "not_found", "procedure_id": procedure_id}
+    logger.info("confirm_scheduled_procedure OK (ID=%s)", procedure_id)
+    return {"status": "confirmed", "procedure_id": procedure_id}
+
+
 # ---------- registry ----------
 
 _TOOLS: list[StructuredTool] = [
@@ -369,6 +526,10 @@ _TOOLS: list[StructuredTool] = [
     find_patient_by_name,
     create_patient,
     update_patient,
+    find_scheduled_procedures,
+    get_specialty_guide,
+    update_procedure_pre_op,
+    confirm_scheduled_procedure,
     get_tables,
     describe_table,
 ]
@@ -398,6 +559,10 @@ __all__ = [
     "find_patient_by_name",
     "create_patient",
     "update_patient",
+    "find_scheduled_procedures",
+    "get_specialty_guide",
+    "update_procedure_pre_op",
+    "confirm_scheduled_procedure",
     "get_tables",
     "describe_table",
 ]

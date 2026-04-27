@@ -8,7 +8,13 @@
       <Packaging>module</Packaging>
       <SourcesRoot>src</SourcesRoot>
       <Resource Name="Sample.PKG"/>
+      <Resource Name="Data.PKG"/>
       <Invoke Method="Run" Class="Sample.MCPSetup"/>
+      <!-- Populate demo data. Order matters: ScheduledProcedure references
+           SSNs from Patients and SpecialtyIDs from SpecialtyGuide. -->
+      <Invoke Method="Populate" Class="Data.Patients" Phase="Activate"/>
+      <Invoke Method="Populate" Class="Data.SpecialtyGuide" Phase="Activate"/>
+      <Invoke Method="Populate" Class="Data.ScheduledProcedure" Phase="Activate"/>
     </Module>
   </Document>
 </Export>
