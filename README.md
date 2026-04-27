@@ -98,19 +98,3 @@ Open <http://localhost:8501>.
 ## 5. Try it
 
 - Use streamlit interface to simulate a patient admission
-
-## Reset / rebuild
-
-To wipe the IRIS volume and re-seed from scratch:
-
-```bash
-docker compose down -v
-docker compose up -d --build
-```
-
-To just reset the chat conversation, use the **🔄 Reset conversation**
-button in the Streamlit sidebar.
-
-## Publicly accessible statement
-
-We are happy for our project to be publicly visible after the event.
