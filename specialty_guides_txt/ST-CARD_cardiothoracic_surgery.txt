@@ -1,0 +1,42 @@
+Specialty ID: ST-CARD
+Specialty: Cardiothoracic Surgery
+
+Purpose
+Synthetic chatbot screening guide for patients scheduled for cardiothoracic procedures.
+
+Relevant procedures in dataset
+- Coronary artery bypass graft
+- Aortic valve replacement
+- Mitral valve repair
+- Lobectomy via thoracotomy
+- Video-assisted thoracoscopic wedge resection
+
+Risk factors to ask about
+- Angina, previous heart attack, heart failure, cardiomyopathy, heart murmur, rheumatic fever
+- Pacemaker, implantable defibrillator, irregular heartbeat, heart block
+- Uncontrolled hypertension or current antihypertensive therapy
+- Stroke or transient ischaemic attack
+- Blood clots, DVT, PE, recent clots within 3 months
+- Significant blood disorders, excessive bleeding or bruising
+- Shortness of breath, COPD, asthma, obstructive sleep apnoea, recent chest infection
+- Reduced exercise tolerance and ability to climb stairs
+- Previous ICU admission or significant anaesthetic complications
+- Smoking status, frailty, mobility limitations, and need for hospital transport
+
+Notable medications to ask about
+- Anticoagulants: warfarin, apixaban, rivaroxaban, edoxaban, dabigatran, heparin
+- Antiplatelets: aspirin, clopidogrel, ticagrelor, prasugrel
+- Beta blockers, ACE inhibitors, ARBs, calcium-channel blockers, nitrates, diuretics
+- Diabetes medicines including insulin and SGLT2 inhibitors
+- Steroids or immunosuppressants
+- More than 3 prescribed medicines
+
+Allergies / reactions to ask about
+- Medicine allergies
+- Latex, plasters/adhesives, iodine/chlorhexidine, food allergies
+- Previous anaphylaxis
+
+Other relevant chatbot prompts
+- Confirm whether the patient has a cardiac device and ask for device card/details.
+- Ask about chest pain at rest, severe chest pain, worsening breathlessness, recent blackouts, or recent infection.
+- Ask about recent admissions, recent procedures, and whether the patient has had a general anaesthetic in the past year.

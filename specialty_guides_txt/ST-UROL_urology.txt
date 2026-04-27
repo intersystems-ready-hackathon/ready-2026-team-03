@@ -1,0 +1,39 @@
+Specialty ID: ST-UROL
+Specialty: Urology
+
+Purpose
+Synthetic chatbot screening guide for patients scheduled for urological procedures.
+
+Relevant procedures in dataset
+- Transurethral resection of prostate
+- Ureteroscopy and laser lithotripsy
+- Circumcision
+- Nephrectomy
+- Cystoscopy with bladder biopsy
+
+Risk factors to ask about
+- Kidney disease, urinary retention, recurrent urinary tract infections, bladder problems
+- Diabetes and infection risk
+- Heart disease, hypertension, stroke/TIA, DVT/PE, bleeding disorders
+- Respiratory disease: asthma, COPD, obstructive sleep apnoea
+- Liver disease, jaundice, hepatitis
+- Current infection symptoms: fever, dysuria, flank pain, worsening urinary symptoms
+- Previous anaesthetic complications
+- Functional capacity, mobility limitations, transport needs
+
+Notable medications to ask about
+- Anticoagulants and antiplatelets: warfarin, DOACs, heparin, aspirin, clopidogrel, ticagrelor
+- Alpha blockers: tamsulosin, alfuzosin, doxazosin
+- 5-alpha-reductase inhibitors: finasteride, dutasteride
+- Diabetes medicines including insulin and SGLT2 inhibitors
+- Antibiotics or recent treatment for UTI
+- Steroids or immunosuppressants
+
+Allergies / reactions to ask about
+- Medicines, latex, plasters/adhesives, antiseptics, food allergies
+- Previous anaphylaxis
+
+Other relevant chatbot prompts
+- Ask about current urinary infection symptoms and whether a urine sample/culture has been requested.
+- Ask about catheters, stents, nephrostomy tubes, or urinary retention.
+- Ask about kidney function and whether recent blood tests are available.

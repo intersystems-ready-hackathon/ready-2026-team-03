@@ -1,0 +1,40 @@
+Specialty ID: ST-ORTH
+Specialty: Orthopaedics
+
+Purpose
+Synthetic chatbot screening guide for patients scheduled for orthopaedic procedures.
+
+Relevant procedures in dataset
+- Total hip replacement
+- Total knee replacement
+- ACL reconstruction
+- Rotator cuff repair
+- Ankle fracture fixation
+
+Risk factors to ask about
+- Mobility limitation, walking aids, wheelchair use, falls risk, home support needs
+- DVT/PE history and recent clots within 3 months
+- Heart disease, hypertension, stroke/TIA, pacemaker/arrhythmia
+- Respiratory disease: asthma, COPD, obstructive sleep apnoea
+- Diabetes and wound-healing concerns
+- Kidney disease, liver disease, significant blood disorders
+- Previous joint replacement, prosthetic joint infection, current skin infections or ulcers
+- Restricted neck/jaw movement if regional/general anaesthesia may be considered
+- Functional capacity and ability to climb stairs
+
+Notable medications to ask about
+- Anticoagulants and antiplatelets: warfarin, DOACs, heparin, aspirin, clopidogrel, ticagrelor
+- Steroids or immunosuppressants
+- Diabetes medicines including insulin
+- Regular opioids, gabapentinoids, NSAIDs, chronic pain medicines
+- Osteoporosis medicines where relevant
+- More than 3 prescribed medicines
+
+Allergies / reactions to ask about
+- Metal allergy, latex, plasters/adhesives, medicines, antiseptics
+- Previous anaphylaxis
+
+Other relevant chatbot prompts
+- Ask about mobility aids, transport needs, home setup, stairs, and discharge support.
+- Ask about current wounds, infections, dental infections, or recent antibiotics.
+- Ask about previous anaesthetic problems and regional anaesthetic/spinal issues where relevant.

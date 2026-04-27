@@ -1,0 +1,39 @@
+Specialty ID: ST-GENS
+Specialty: General Surgery
+
+Purpose
+Synthetic chatbot screening guide for patients scheduled for general surgical procedures.
+
+Relevant procedures in dataset
+- Laparoscopic cholecystectomy
+- Open inguinal hernia repair
+- Laparoscopic appendicectomy
+- Colectomy
+- Haemorrhoidectomy
+
+Risk factors to ask about
+- Heart disease, uncontrolled hypertension, stroke/TIA, DVT/PE, bleeding disorders
+- Asthma, COPD, obstructive sleep apnoea, recent respiratory infection
+- Diabetes and current glucose control
+- Kidney disease, liver disease, jaundice, hepatitis
+- Significant reflux disease, hiatus hernia, heartburn
+- Previous abdominal surgery, stomas, hernias, bowel disease where relevant
+- Reduced functional capacity, frailty, mobility limitations
+- Previous anaesthetic complications or family history of anaesthetic problems
+- Physical impairment, hearing/visual impairment, interpreter needs
+
+Notable medications to ask about
+- Anticoagulants and antiplatelets: warfarin, DOACs, heparin, aspirin, clopidogrel, ticagrelor
+- Diabetes medicines including insulin, oral agents, and SGLT2 inhibitors
+- Steroids or immunosuppressants
+- Opioids or chronic pain medicines
+- More than 3 prescribed medicines
+
+Allergies / reactions to ask about
+- Medicines, latex, plasters/adhesives, antiseptics, food allergies
+- Previous anaphylaxis
+
+Other relevant chatbot prompts
+- Ask about abdominal symptoms relevant to procedure: vomiting, jaundice, bowel habit changes, bleeding, infection symptoms.
+- Ask whether the patient can tolerate lying flat and whether they have reflux/aspiration risks.
+- Ask about previous surgery/general anaesthetic in the past year.
